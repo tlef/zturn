@@ -9,7 +9,7 @@
 			"program": "${workspaceFolder}/out/index.js",
 			"env": {
 				"ENV": "development",
-				"PORT": "41733",
+				"PORT": "41732",
 				"LOG_LEVEL": "debug",
 				"STORY_DIR": "${workspaceFolder}/stories",
 				"DATABASE_PATH": "${workspaceFolder}/data/zturn.sqlite"
