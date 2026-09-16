@@ -1,0 +1,10 @@
+node_modules
+out
+coverage
+api-docs
+data
+stories
+.git
+.env
+.vscode
+*.md

@@ -1,0 +1,17 @@
+services:
+  zturn:
+    build: .
+    ports:
+      - "41732:41732"
+    volumes:
+      # Story files are not in the image. Put zork1.z3 etc. in ./stories.
+      - ./stories:/app/stories:ro
+      - zturn-data:/app/data
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Optional. Enables the Slack bridge at /slack. openssl rand -hex 32
+      - SLACK_SECRET_KEY=${SLACK_SECRET_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  zturn-data:
