@@ -84,6 +84,18 @@ describe("SessionController", () => {
 		expect(created.out.text).to.match(/^Welcome/);
 	});
 
+	it("reproduces a session exactly when given its seed", async () => {
+		const original = await controller.createSession("fake");
+		const copy = await controller.createSession("fake", original.session.seed);
+		expect(copy.session.seed).to.equal(original.session.seed);
+		expect(copy.out).to.deep.equal(original.out);
+		await expectError(controller.createSession("fake", 0), ERRORS.invalid_seed);
+		await expectError(
+			controller.createSession("fake", 1.5),
+			ERRORS.invalid_seed,
+		);
+	});
+
 	it("rejects unknown and malformed game ids", async () => {
 		await expectError(controller.createSession("zork9"), ERRORS.game_not_found);
 		await expectError(controller.createSession("../x"), ERRORS.invalid_game_id);

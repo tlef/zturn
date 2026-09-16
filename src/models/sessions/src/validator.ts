@@ -4,6 +4,7 @@ import { type ISessionValidator } from "../types.js";
 // control characters that could never come from a keyboard.
 const MAX_INPUT_BYTES = 256;
 const MAX_KEY_LENGTH = 128;
+const MAX_SEED = 0xffffffff;
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const KEY_PATTERN = /^[\x21-\x7e]{1,128}$/;
 // eslint-disable-next-line no-control-regex
@@ -32,5 +33,9 @@ export class SessionValidator implements ISessionValidator {
 
 	isValidIdempotencyKey(key: string): boolean {
 		return key.length <= MAX_KEY_LENGTH && KEY_PATTERN.test(key);
+	}
+
+	isValidSeed(seed: number): boolean {
+		return Number.isInteger(seed) && seed >= 1 && seed <= MAX_SEED;
 	}
 }

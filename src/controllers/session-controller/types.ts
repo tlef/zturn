@@ -10,6 +10,7 @@ export enum ERRORS {
 	invalid_input = "invalid_input",
 	invalid_turn = "invalid_turn",
 	invalid_idempotency_key = "invalid_idempotency_key",
+	invalid_seed = "invalid_seed",
 	game_not_found = "game_not_found",
 	session_not_found = "session_not_found",
 	unauthorized = "unauthorized",
@@ -22,6 +23,8 @@ export enum ERRORS {
 export interface ISessionSummary {
 	id: string;
 	gameId: string;
+	// With the input list, enough to replay the session anywhere.
+	seed: number;
 	turn: number;
 	status: Status | null;
 	awaiting: Awaiting;
@@ -53,7 +56,7 @@ export interface IPlayTurnRequest {
 }
 
 export interface ISessionController {
-	createSession: (gameId: string) => Promise<ICreatedSession>;
+	createSession: (gameId: string, seed?: number) => Promise<ICreatedSession>;
 	authorize: (sessionId: string, token: string | null) => Promise<void>;
 	getSession: (sessionId: string) => Promise<ISessionSummary>;
 	playTurn: (

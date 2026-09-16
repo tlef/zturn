@@ -48,4 +48,5 @@ export interface ISessionValidator {
 	isValidInput: (input: string) => boolean;
 	isValidTurn: (turn: number) => boolean;
 	isValidIdempotencyKey: (key: string) => boolean;
+	isValidSeed: (seed: number) => boolean;
 }

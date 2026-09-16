@@ -49,6 +49,9 @@ export class ApiSession {
 		 *           type: string
 		 *         gameId:
 		 *           type: string
+		 *         seed:
+		 *           type: integer
+		 *           description: With the transcript's inputs, enough to replay the session anywhere.
 		 *         turn:
 		 *           type: integer
 		 *           description: Number of inputs played so far.
@@ -83,7 +86,10 @@ export class ApiSession {
 		 *     tags:
 		 *       - Sessions
 		 *     summary: Start a game
-		 *     description: Creates a session and returns its bearer token. The token is the only credential for the session and is never shown again.
+		 *     description: >
+		 *       Creates a session and returns its bearer token. The token is the only credential
+		 *       for the session and is never shown again. Pass a seed to reproduce another
+		 *       session exactly; with the same seed and inputs the game plays identically.
 		 *     requestBody:
 		 *       required: true
 		 *       content:
@@ -95,6 +101,11 @@ export class ApiSession {
 		 *               gameId:
 		 *                 type: string
 		 *                 example: zork1
+		 *               seed:
+		 *                 type: integer
+		 *                 minimum: 1
+		 *                 maximum: 4294967295
+		 *                 description: Optional. Random when omitted.
 		 *     responses:
 		 *       201:
 		 *         description: The new session, its token, and the intro text as turn 0
@@ -286,7 +297,13 @@ export class ApiSession {
 		if (typeof body.gameId !== "string") {
 			badRequest("gameId must be a string");
 		}
-		const created = await this.sessionController.createSession(body.gameId);
+		if (body.seed !== undefined && typeof body.seed !== "number") {
+			badRequest("seed must be a number");
+		}
+		const created = await this.sessionController.createSession(
+			body.gameId,
+			body.seed,
+		);
 		ctx.status = 201;
 		ctx.body = {
 			session: created.session,

@@ -21,7 +21,7 @@ const config: AppConfig = {
 };
 
 const app = new App(config);
-app.start(port, host);
+await app.start(port, host);
 
 async function gracefulShutdown(signal: string): Promise<void> {
 	Logger.logInfo("Shutting down", { signal });

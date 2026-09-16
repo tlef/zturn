@@ -68,6 +68,25 @@ describe("sessions API", () => {
 		expect(res.body.out.awaiting).to.equal("line");
 	});
 
+	it("accepts a seed and reports it back", async () => {
+		const res = await request
+			.post("/sessions")
+			.send({ gameId: "fake", seed: 777 })
+			.expect(201);
+		expect(res.body.session.seed).to.equal(777);
+		expect(res.body.out.text).to.include("seed 777");
+		const bad = await request
+			.post("/sessions")
+			.send({ gameId: "fake", seed: "7" })
+			.expect(400);
+		expect(bad.body.error).to.equal("invalid_request");
+		const zero = await request
+			.post("/sessions")
+			.send({ gameId: "fake", seed: 0 })
+			.expect(400);
+		expect(zero.body.error).to.equal("invalid_seed");
+	});
+
 	it("rejects bad create requests with codes", async () => {
 		const missing = await request.post("/sessions").send({}).expect(400);
 		expect(missing.body.error).to.equal("invalid_request");

@@ -106,9 +106,15 @@ export class App {
 		this.app.use(this.router.allowedMethods());
 	}
 
-	public start(port: number, host: string): void {
-		this.server = this.app.listen(port, host);
-		Logger.logInfo("Listening", { port, host });
+	// Resolves once the port is bound, so getPort() is accurate afterwards.
+	public async start(port: number, host: string): Promise<void> {
+		const server = this.app.listen(port, host);
+		this.server = server;
+		await new Promise<void>((resolve, reject) => {
+			server.once("listening", resolve);
+			server.once("error", reject);
+		});
+		Logger.logInfo("Listening", { port: this.getPort(), host });
 	}
 
 	public async stop(): Promise<void> {
@@ -120,6 +126,12 @@ export class App {
 			});
 		}
 		this.database.close();
+	}
+
+	// The port actually bound, for callers that start on port 0.
+	public getPort(): number | null {
+		const address = this.server?.address();
+		return address && typeof address === "object" ? address.port : null;
 	}
 
 	public getCallback(): ReturnType<Koa["callback"]> {

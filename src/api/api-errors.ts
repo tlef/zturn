@@ -14,6 +14,7 @@ const STATUS_BY_CODE = new Map<string, number>([
 	[SESSION_ERRORS.invalid_input, 400],
 	[SESSION_ERRORS.invalid_turn, 400],
 	[SESSION_ERRORS.invalid_idempotency_key, 400],
+	[SESSION_ERRORS.invalid_seed, 400],
 	[SESSION_ERRORS.unauthorized, 401],
 	[SESSION_ERRORS.game_not_found, 404],
 	[SESSION_ERRORS.session_not_found, 404],

@@ -48,9 +48,12 @@ export class SessionController implements ISessionController {
 		this.snapshotCache = snapshotCache;
 	}
 
-	async createSession(gameId: string): Promise<ICreatedSession> {
+	async createSession(gameId: string, seed?: number): Promise<ICreatedSession> {
 		if (!this.sessionValidator.isValidGameId(gameId)) {
 			throw new ControllerError(ERRORS.invalid_game_id);
+		}
+		if (seed !== undefined && !this.sessionValidator.isValidSeed(seed)) {
+			throw new ControllerError(ERRORS.invalid_seed);
 		}
 		const game = this.gameRegistry.get(gameId);
 		if (!game) {
@@ -61,7 +64,7 @@ export class SessionController implements ISessionController {
 		const session: ISessionBase = {
 			id: this.tokenService.generateSessionId(),
 			gameId,
-			seed: this.tokenService.generateSeed(),
+			seed: seed ?? this.tokenService.generateSeed(),
 			tokenHash: this.tokenService.hashToken(token),
 			version: 0,
 			createdAt: now,
@@ -282,6 +285,7 @@ export class SessionController implements ISessionController {
 		return {
 			id: session.id,
 			gameId: session.gameId,
+			seed: session.seed,
 			turn: session.version,
 			status: latest.status,
 			awaiting: latest.awaiting,

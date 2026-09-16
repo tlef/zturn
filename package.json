@@ -16,7 +16,8 @@
 		"lint": "eslint 'src/**/*.ts' && prettier --check 'src/**/*.ts'",
 		"lint:fix": "eslint 'src/**/*.ts' --fix && prettier --write 'src/**/*.ts'",
 		"test": "c8 mocha 'src/**/*.test.ts'",
-		"test:single": "mocha"
+		"test:single": "mocha",
+		"cli": "node --disable-warning=ExperimentalWarning out/adapters/cli/index.js"
 	},
 	"author": "Tim Lefler",
 	"license": "UNLICENSED",
