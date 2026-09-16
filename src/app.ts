@@ -11,6 +11,8 @@ import {
 	type IGameRegistry,
 	scanStoryDirectory,
 } from "./libs/game-registry/index.js";
+import { SecretBox } from "./libs/secret-box/index.js";
+import { SlackSigner } from "./libs/slack-signing/index.js";
 import { SnapshotCache } from "./libs/snapshot-cache/index.js";
 import { TokenService } from "./libs/token/index.js";
 import {
@@ -19,9 +21,17 @@ import {
 	SqliteSessionDatastore,
 } from "./models/sessions/index.js";
 import {
+	SlackAppValidator,
+	SqliteSlackAppDatastore,
+} from "./models/slack-apps/index.js";
+import {
 	HealthController,
 	type IHealthController,
 } from "./controllers/health-controller/index.js";
+import {
+	type ISlackController,
+	SlackController,
+} from "./controllers/slack-controller/index.js";
 import {
 	type ISessionController,
 	SessionController,
@@ -32,12 +42,16 @@ import { ApiGame } from "./api/game.js";
 import { ApiSession } from "./api/session.js";
 import { ApiDocs } from "./api/api-docs.js";
 import { ApiWeb } from "./api/web.js";
+import { ApiSlack } from "./api/slack.js";
 import { controllerErrorMiddleware } from "./api/api-errors.js";
 
 export interface AppConfig {
 	env: string;
 	storyDir: string;
 	databasePath: string;
+	// 64 hex characters. Enables the Slack bridge; signing secrets are
+	// encrypted with it at rest.
+	slackSecretKey?: string;
 	// Tests inject a registry so no story file is needed.
 	gameRegistry?: IGameRegistry;
 }
@@ -52,11 +66,13 @@ export class App {
 
 	protected healthController: IHealthController;
 	protected sessionController: ISessionController;
+	protected slackController: ISlackController | null = null;
 
 	protected apiHealth: ApiHealth;
 	protected apiGame: ApiGame;
 	protected apiSession: ApiSession;
 	protected apiWeb: ApiWeb;
+	protected apiSlack: ApiSlack;
 
 	private server: ReturnType<Koa["listen"]> | null = null;
 
@@ -67,7 +83,8 @@ export class App {
 		this.app.use(Logger.getLoggerMiddleware(config.env));
 		this.app.use(errorMiddleware);
 		this.app.use(controllerErrorMiddleware);
-		this.app.use(koaBody());
+		// Slack signs the raw body, so keep it alongside the parsed form.
+		this.app.use(koaBody({ includeUnparsed: true }));
 
 		Logger.logInfo("App starting", {
 			env: config.env,
@@ -80,14 +97,31 @@ export class App {
 		this.database = new AppDatabase(openDatabasePath(config.databasePath));
 		this.sessionDatastore = new SqliteSessionDatastore(this.database);
 
+		const tokenService = new TokenService();
+
 		this.healthController = new HealthController();
 		this.sessionController = new SessionController(
 			this.sessionDatastore,
 			new SessionValidator(),
 			this.gameRegistry,
-			new TokenService(),
+			tokenService,
 			new SnapshotCache(),
 		);
+
+		if (config.slackSecretKey) {
+			this.slackController = new SlackController(
+				new SqliteSlackAppDatastore(this.database),
+				new SlackAppValidator(),
+				this.sessionController,
+				this.gameRegistry,
+				new SecretBox(config.slackSecretKey),
+				new SlackSigner(),
+				tokenService,
+			);
+			Logger.logInfo("Slack bridge enabled");
+		} else {
+			Logger.logInfo("Slack bridge disabled (no SLACK_SECRET_KEY)");
+		}
 
 		this.apiHealth = new ApiHealth(this.healthController);
 		this.apiHealth.registerRoutes(this.router);
@@ -106,6 +140,9 @@ export class App {
 
 		this.apiWeb = new ApiWeb();
 		this.apiWeb.registerRoutes(this.router);
+
+		this.apiSlack = new ApiSlack(this.slackController);
+		this.apiSlack.registerRoutes(this.router);
 
 		this.app.use(this.router.routes());
 		this.app.use(this.router.allowedMethods());

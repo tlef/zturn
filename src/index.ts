@@ -18,6 +18,7 @@ const config: AppConfig = {
 	env,
 	storyDir: process.env.STORY_DIR ?? DEFAULT_STORY_DIR,
 	databasePath: process.env.DATABASE_PATH ?? DEFAULT_DATABASE_PATH,
+	slackSecretKey: process.env.SLACK_SECRET_KEY || undefined,
 };
 
 const app = new App(config);
