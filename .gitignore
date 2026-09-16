@@ -1,0 +1,16 @@
+node_modules
+out
+.DS_Store
+.env
+coverage
+.nyc_output
+
+# Local working notes, never committed
+arch.md
+DESIGN.md
+
+# Story files are not shipped
+stories/
+
+# SQLite databases
+data/

@@ -1,0 +1,7 @@
+{
+	"all": true,
+	"src": ["src"],
+	"exclude": ["**/*.test.ts", "**/*.d.ts", "out/**", "node_modules/**"],
+	"reporter": ["text", "lcov", "html"],
+	"check-coverage": false
+}
