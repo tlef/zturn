@@ -2,47 +2,263 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<title>zturn</title>
+	<meta name="description" content="Play Infocom's Zork over HTTP, one turn per request.">
+	<style>
+		:root {
+			color-scheme: light dark;
+			--bg: #f4f1ea;
+			--fg: #1f1d1a;
+			--muted: #6b655c;
+			--rule: #d9d3c7;
+			--card: #fbf9f4;
+			--accent: #b8620a;
+			--code-bg: #ebe6da;
+			--term-bg: #14100a;
+			--term-fg: #ffb000;
+			--term-dim: #a8740c;
+			--term-bar-bg: #ffb000;
+			--term-bar-fg: #14100a;
+			--term-frame: #2a2117;
+			--mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+			--sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #16140f;
+				--fg: #ebe6da;
+				--muted: #a39c8f;
+				--rule: #2e2a22;
+				--card: #1d1a14;
+				--accent: #f0a030;
+				--code-bg: #211d16;
+				--term-frame: #2a2117;
+			}
+		}
+		* { box-sizing: border-box; }
+		html { scroll-behavior: smooth; }
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--fg);
+			font-family: var(--sans);
+			line-height: 1.55;
+			-webkit-font-smoothing: antialiased;
+		}
+		a { color: var(--accent); }
+		code, pre, kbd { font-family: var(--mono); }
+		.wrap { max-width: 68rem; margin: 0 auto; padding: 0 1.25rem; }
+
+		/* Masthead */
+		header.site {
+			display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+			padding: 1.25rem 0; border-bottom: 1px solid var(--rule);
+		}
+		header.site .brand { font-family: var(--mono); font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--fg); letter-spacing: 0.02em; }
+		header.site nav { display: flex; gap: 1.25rem; font-size: 0.95rem; }
+		header.site nav a { color: var(--muted); text-decoration: none; }
+		header.site nav a:hover { color: var(--accent); }
+
+		.hero { padding: 3rem 0 2rem; }
+		.hero h1 { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.1; margin: 0 0 0.75rem; letter-spacing: -0.01em; }
+		.hero p { font-size: 1.15rem; color: var(--muted); max-width: 40rem; margin: 0 0 1.5rem; }
+		.hero .cta { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; padding: 0.65rem 1.1rem; border-radius: 6px; font-weight: 600; }
+
+		/* Terminal */
+		.picker { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0 0 0.75rem; }
+		.picker .games { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+		.picker .games button {
+			background: var(--card); color: var(--fg); border: 0; border-right: 1px solid var(--rule);
+			padding: 0.45rem 0.85rem; font: inherit; font-size: 0.95rem; cursor: pointer;
+		}
+		.picker .games button:last-child { border-right: 0; }
+		.picker .games button[aria-checked="true"] { background: var(--accent); color: #fff; }
+		.picker .games:empty::after { content: "No games loaded on the server."; padding: 0.45rem 0.85rem; color: var(--muted); display: inline-block; }
+		.picker .spacer { flex: 1; }
+		.picker .tools { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+		.picker .tools button, .picker .seed {
+			background: var(--card); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px;
+			padding: 0.4rem 0.7rem; font: inherit; font-size: 0.9rem; cursor: pointer;
+		}
+		.picker .tools button:disabled { opacity: 0.45; cursor: default; }
+		.picker .seed { width: 8.5rem; cursor: text; }
+
+		.terminal {
+			background: var(--term-bg); color: var(--term-fg);
+			border: 1px solid var(--term-frame); border-radius: 10px;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.35), inset 0 0 80px rgba(0,0,0,0.5);
+			font-family: var(--mono); font-size: 0.95rem; line-height: 1.5;
+			display: flex; flex-direction: column;
+			height: min(70vh, 40rem); min-height: 22rem;
+			position: relative; overflow: hidden;
+		}
+		.terminal::after {
+			content: ""; position: absolute; inset: 0; pointer-events: none;
+			background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px);
+			mix-blend-mode: overlay;
+		}
+		.terminal .bar {
+			display: flex; justify-content: space-between; gap: 1rem;
+			background: var(--term-bar-bg); color: var(--term-bar-fg);
+			padding: 0.2rem 0.9rem; font-weight: 600; white-space: nowrap;
+		}
+		.terminal .bar span { overflow: hidden; text-overflow: ellipsis; }
+		.terminal .bar[hidden] { display: none; }
+		.terminal .screen {
+			flex: 1; overflow-y: auto; padding: 0.9rem 1rem; white-space: pre-wrap; word-wrap: break-word;
+			scrollbar-color: var(--term-dim) transparent;
+		}
+		.terminal .screen .cmd { color: var(--term-dim); }
+		.terminal .screen .note { color: var(--term-dim); font-style: italic; }
+		.terminal .prompt {
+			display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem 0.8rem;
+			border-top: 1px solid var(--term-frame);
+		}
+		.terminal .prompt label { color: var(--term-fg); }
+		.terminal .prompt input {
+			flex: 1; background: transparent; border: 0; outline: 0; color: var(--term-fg);
+			font: inherit; caret-color: var(--term-fg); min-width: 0;
+		}
+		.terminal .prompt input::placeholder { color: var(--term-dim); }
+		.terminal .prompt input:disabled { opacity: 0.6; }
+		.terminal .prompt button {
+			background: transparent; color: var(--term-dim); border: 1px solid var(--term-frame);
+			border-radius: 4px; font: inherit; padding: 0.1rem 0.6rem; cursor: pointer;
+		}
+		.terminal .prompt button:hover { color: var(--term-fg); }
+		.message { min-height: 1.5rem; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.9rem; }
+		.message.error { color: #c0392b; }
+
+		/* Sections */
+		section { padding: 3rem 0 0; }
+		section h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+		.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+		.card { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 1.1rem 1.2rem; }
+		.card h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+		.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+		.api { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+		@media (max-width: 48rem) { .api { grid-template-columns: 1fr; } }
+		pre.code {
+			background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px;
+			padding: 1rem; margin: 0; overflow-x: auto; font-size: 0.85rem; line-height: 1.5;
+		}
+		pre.code .c { color: var(--muted); }
+		footer.site { margin-top: 4rem; padding: 1.5rem 0 3rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; }
+		footer.site p { margin: 0.25rem 0; }
+		[hidden] { display: none !important; }
+	</style>
 </head>
 <body>
-	<h1>zturn</h1>
+	<div class="wrap">
+		<header class="site">
+			<a class="brand" href="/">zturn</a>
+			<nav>
+				<a href="#play">Play</a>
+				<a href="#how">How it works</a>
+				<a href="#api">API</a>
+				<a href="/docs">Docs</a>
+				<a href="https://github.com/tlef/zturn">Source</a>
+			</nav>
+		</header>
 
-	<form id="new-game">
-		<label>Game <select id="game"></select></label>
-		<label>Seed <input id="seed" type="number" min="1" placeholder="random"></label>
-		<button type="submit">New game</button>
-	</form>
+		<section class="hero">
+			<h1>Zork, one turn per request.</h1>
+			<p>zturn runs Infocom's Z-machine games behind an HTTP API. Every request plays one turn, every session is a replayable log of what you typed, and any client that can send a line of text can play.</p>
+			<a class="cta" href="#play">Play in the browser</a>
+		</section>
 
-	<p id="session-info" hidden>
-		Session <code id="session-id"></code>, seed <code id="session-seed"></code>, turn <span id="session-turn"></span>.
-		<button type="button" id="undo">Undo</button>
-		<button type="button" id="export">Export</button>
-		<button type="button" id="forget">Forget session</button>
-	</p>
+		<section id="play">
+			<div class="picker">
+				<div class="games" id="games" role="radiogroup" aria-label="Game"></div>
+				<input class="seed" id="seed" type="number" min="1" placeholder="seed (optional)" title="Games with the same seed and the same commands play out identically.">
+				<span class="spacer"></span>
+				<div class="tools">
+					<button type="button" id="new">New game</button>
+					<button type="button" id="undo" disabled>Undo</button>
+					<button type="button" id="share" disabled>Share link</button>
+					<button type="button" id="export" disabled>Export</button>
+				</div>
+			</div>
 
-	<p id="status" hidden>
-		<strong id="location"></strong> &middot; Score: <span id="score"></span> &middot; Moves: <span id="moves"></span>
-	</p>
+			<div class="terminal" id="terminal">
+				<div class="bar" id="status" hidden>
+					<span id="location"></span>
+					<span><span id="score-label">Score: </span><span id="score"></span>&nbsp;&nbsp;&nbsp;Moves: <span id="moves"></span></span>
+				</div>
+				<div class="screen" id="transcript" aria-live="polite"></div>
+				<form class="prompt" id="turn">
+					<label for="input">&gt;</label>
+					<input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type to begin">
+					<button type="submit">Enter</button>
+				</form>
+			</div>
+			<p class="message" id="message"></p>
+		</section>
 
-	<div id="transcript"></div>
+		<section id="how">
+			<h2>How it works</h2>
+			<div class="cards">
+				<div class="card">
+					<h3>One request, one turn</h3>
+					<p>The Z-machine pauses whenever the game asks for a line of input. That pause is the turn boundary. A request delivers your line, the game runs until it asks again, and the response carries the text and the status line. No process waits between calls.</p>
+				</div>
+				<div class="card">
+					<h3>Sessions are a log</h3>
+					<p>A session is its seed plus every line you have typed. The server can rebuild the game at any turn by replaying that log, which is how undo, transcripts and recovery after a restart all work without special code.</p>
+				</div>
+				<div class="card">
+					<h3>Seeds make it repeatable</h3>
+					<p>Everything random in the game, from the thief's wanderings to the fights, is drawn from a generator started with the session's seed. Same seed, same commands, same game. That is what makes a share link work.</p>
+				</div>
+			</div>
+		</section>
 
-	<form id="turn" hidden>
-		<label>&gt; <input id="input" autocomplete="off" autofocus></label>
-		<button type="submit">Send</button>
-	</form>
+		<section id="api">
+			<h2>Use the API</h2>
+			<div class="api">
+				<pre class="code" id="curl-example"><span class="c"># start a session</span>
+curl -s ORIGIN/sessions \
+  -H 'content-type: application/json' \
+  -d '{"gameId":"zork1"}'
 
-	<p id="message"></p>
-	<pre id="export-output" hidden></pre>
+<span class="c"># play a turn with the token it returned</span>
+curl -s ORIGIN/sessions/SESSION_ID/turns \
+  -H 'authorization: Bearer TOKEN' \
+  -H 'content-type: application/json' \
+  -d '{"input":"open mailbox","expectedTurn":0}'</pre>
+				<pre class="code">{
+  "turn": 1,
+  "out": {
+    "text": "Opening the small mailbox reveals a leaflet.",
+    "status": { "location": "West of House", "score": 0, "moves": 1 },
+    "awaiting": "line"
+  }
+}</pre>
+			</div>
+			<p>Pass <code>expectedTurn</code> to be told, with a 409, when someone else has played since you looked. Pass an <code>idempotencyKey</code> so a retried request returns the stored reply instead of playing again. The full reference is in the <a href="/docs">interactive docs</a>.</p>
+		</section>
+
+		<footer class="site">
+			<p>Zork is a trademark of Activision. The story files are not distributed with this service.</p>
+			<p>Interpreter: <a href="https://github.com/curiousdannii/ifvms.js">ZVM from ifvms.js</a>. Source: <a href="https://github.com/tlef/zturn">github.com/tlef/zturn</a>.</p>
+		</footer>
+	</div>
 
 	<script>
-		// A thin client over the zturn HTTP API. The page keeps the session id and
-		// token in localStorage so a reload resumes the game.
+		// A thin client over the zturn HTTP API. The session id and token live in
+		// localStorage so a reload resumes the game; a share link carries a seed
+		// and input list that is replayed into a fresh session.
 		const STORAGE_KEY = "zturn.session";
 		const el = (id) => document.getElementById(id);
 
+		let games = [];
+		let selectedGame = null;
 		let session = null; // { id, token, gameId }
 		let expectedTurn = 0;
+		let busy = false;
+		const history = [];
+		let historyIndex = 0;
 
 		async function api(method, path, body, token) {
 			const headers = { accept: "application/json" };
@@ -54,122 +270,139 @@
 				body: body === undefined ? undefined : JSON.stringify(body),
 			});
 			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw Object.assign(new Error(data.error || res.status), { status: res.status, data });
+			if (!res.ok) throw Object.assign(new Error(data.error || String(res.status)), { status: res.status, data });
 			return data;
 		}
 
-		function showMessage(text) {
-			el("message").textContent = text || "";
+		function showMessage(text, isError) {
+			const m = el("message");
+			m.textContent = text || "";
+			m.classList.toggle("error", Boolean(isError));
+		}
+
+		function clearScreen() {
+			el("transcript").textContent = "";
+		}
+
+		function print(text, className) {
+			const node = document.createElement("div");
+			if (className) node.className = className;
+			node.textContent = text;
+			el("transcript").appendChild(node);
+			el("transcript").scrollTop = el("transcript").scrollHeight;
 		}
 
 		function appendTurn(input, out) {
-			const block = document.createElement("div");
-			if (input !== null) {
-				const cmd = document.createElement("p");
-				cmd.textContent = `> ${input}`;
-				block.appendChild(cmd);
-			}
-			const text = document.createElement("p");
-			text.innerHTML = out.text
-				.split("\n")
-				.map((line) => line.replace(/&/g, "&amp;").replace(/</g, "&lt;"))
-				.join("<br>");
-			block.appendChild(text);
-			el("transcript").appendChild(block);
-			block.scrollIntoView({ block: "end" });
+			if (input !== null) print(`> ${input}`, "cmd");
+			print(out.text);
+			print("");
 		}
 
 		function renderStatus(out) {
-			const status = el("status");
+			const bar = el("status");
 			if (out.status) {
 				el("location").textContent = out.status.location;
 				el("score").textContent = out.status.score;
 				el("moves").textContent = out.status.moves;
-				status.hidden = false;
+				bar.hidden = false;
 			} else {
-				status.hidden = true;
+				bar.hidden = true;
 			}
 			const over = out.awaiting === "none";
-			el("turn").hidden = over;
 			el("input").disabled = over;
-			if (over) showMessage("The game has ended.");
+			el("input").placeholder = over ? "the game has ended" : "";
+			if (over) print("[The game has ended. Press New game to play again.]", "note");
 		}
 
 		function renderSession(summary) {
-			el("session-id").textContent = summary.id;
-			el("session-seed").textContent = summary.seed;
-			el("session-turn").textContent = summary.turn;
-			el("session-info").hidden = false;
-			el("undo").disabled = summary.turn === 0;
 			expectedTurn = summary.turn;
+			el("undo").disabled = summary.turn === 0;
+			el("share").disabled = false;
+			el("export").disabled = false;
+			selectGame(summary.gameId);
 		}
 
 		function saveSession() {
-			try {
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-			} catch {}
+			try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); } catch {}
 		}
 
 		function loadSession() {
-			try {
-				return JSON.parse(localStorage.getItem(STORAGE_KEY));
-			} catch {
-				return null;
+			try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+		}
+
+		function forgetSession() {
+			session = null;
+			try { localStorage.removeItem(STORAGE_KEY); } catch {}
+			el("undo").disabled = true;
+			el("share").disabled = true;
+			el("export").disabled = true;
+			el("status").hidden = true;
+			el("input").disabled = false;
+			el("input").placeholder = "type to begin";
+		}
+
+		function selectGame(id) {
+			selectedGame = id;
+			for (const button of el("games").children) {
+				button.setAttribute("aria-checked", String(button.dataset.id === id));
 			}
 		}
 
 		async function loadGames() {
-			const { games } = await api("GET", "/games");
-			const select = el("game");
-			select.innerHTML = "";
+			({ games } = await api("GET", "/games"));
+			const box = el("games");
+			box.textContent = "";
 			for (const game of games) {
-				const option = document.createElement("option");
-				option.value = game.id;
-				option.textContent = game.title;
-				select.appendChild(option);
+				const button = document.createElement("button");
+				button.type = "button";
+				button.role = "radio";
+				button.dataset.id = game.id;
+				button.textContent = game.title;
+				button.addEventListener("click", () => selectGame(game.id));
+				box.appendChild(button);
 			}
-			if (games.length === 0) showMessage("The server has no games loaded.");
+			if (games.length) selectGame(games[0].id);
+			const example = el("curl-example");
+			example.innerHTML = example.innerHTML
+				.replaceAll("ORIGIN", location.origin)
+				.replaceAll('"zork1"', `"${games[0] ? games[0].id : "zork1"}"`);
 		}
 
-		async function newGame(event) {
-			event.preventDefault();
+		function withBusy(fn) {
+			return async (...args) => {
+				if (busy) return;
+				busy = true;
+				try { await fn(...args); } finally { busy = false; el("input").focus(); }
+			};
+		}
+
+		const newGame = withBusy(async (seedOverride) => {
+			if (!selectedGame) { showMessage("No game to start.", true); return; }
 			showMessage("");
-			const body = { gameId: el("game").value };
-			const seed = Number(el("seed").value);
+			const body = { gameId: selectedGame };
+			const seed = seedOverride ?? Number(el("seed").value);
 			if (seed > 0) body.seed = seed;
-			try {
-				const created = await api("POST", "/sessions", body);
-				session = { id: created.session.id, token: created.token, gameId: created.session.gameId };
-				saveSession();
-				el("transcript").innerHTML = "";
-				renderSession(created.session);
-				appendTurn(null, created.out);
-				renderStatus(created.out);
-				el("input").focus();
-			} catch (error) {
-				showMessage(`Could not start: ${error.message}`);
-			}
-		}
+			const created = await api("POST", "/sessions", body);
+			session = { id: created.session.id, token: created.token, gameId: created.session.gameId };
+			saveSession();
+			clearScreen();
+			renderSession(created.session);
+			appendTurn(null, created.out);
+			renderStatus(created.out);
+			return created;
+		});
 
-		// Rebuilds the page from the server after a reload or an undo.
+		// Rebuilds the screen from the server after a reload, an undo, or a conflict.
 		async function resume() {
-			try {
-				const summary = await api("GET", `/sessions/${session.id}`, undefined, session.token);
-				const { turns } = await api("GET", `/sessions/${session.id}/transcript`, undefined, session.token);
-				el("transcript").innerHTML = "";
-				renderSession(summary);
-				for (const turn of turns) appendTurn(turn.input, turn.out);
-				renderStatus(turns[turns.length - 1].out);
-			} catch (error) {
-				showMessage(`Could not resume the saved session (${error.message}). Start a new game.`);
-				forget();
-			}
+			const summary = await api("GET", `/sessions/${session.id}`, undefined, session.token);
+			const { turns } = await api("GET", `/sessions/${session.id}/transcript`, undefined, session.token);
+			clearScreen();
+			renderSession(summary);
+			for (const turn of turns) appendTurn(turn.input, turn.out);
+			renderStatus(turns[turns.length - 1].out);
 		}
 
-		async function playTurn(event) {
-			event.preventDefault();
-			const input = el("input").value;
-			el("input").value = "";
+		const playTurn = withBusy(async (input) => {
 			showMessage("");
 			try {
 				const reply = await api(
@@ -179,7 +412,6 @@
 					session.token,
 				);
 				expectedTurn = reply.turn;
-				el("session-turn").textContent = reply.turn;
 				el("undo").disabled = false;
 				appendTurn(input, reply.out);
 				renderStatus(reply.out);
@@ -187,63 +419,139 @@
 				if (error.status === 409 && error.data.error === "turn_conflict") {
 					showMessage(`Someone else played; the session is now at turn ${error.data.turn}. Your input was not sent.`);
 					await resume();
+				} else if (error.status === 409 && error.data.error === "game_over") {
+					await resume();
 				} else {
-					showMessage(`Error: ${error.message}`);
+					showMessage(`Error: ${error.message}`, true);
 				}
 			}
-			el("input").focus();
+		});
+
+		const undo = withBusy(async () => {
+			if (!session || expectedTurn === 0) return;
+			await api("POST", `/sessions/${session.id}/rewind`, { toTurn: expectedTurn - 1 }, session.token);
+			await resume();
+			showMessage("Undid the last turn.");
+		});
+
+		// A seed plus the input list is the whole game.
+		async function replayOf() {
+			const summary = await api("GET", `/sessions/${session.id}`, undefined, session.token);
+			const { turns } = await api("GET", `/sessions/${session.id}/transcript`, undefined, session.token);
+			return {
+				gameId: summary.gameId,
+				seed: summary.seed,
+				inputs: turns.filter((t) => t.input !== null).map((t) => t.input),
+			};
 		}
 
-		async function undo() {
-			if (expectedTurn === 0) return;
+		function encodeReplay(replay) {
+			const bytes = new TextEncoder().encode(JSON.stringify(replay));
+			return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+		}
+
+		function decodeReplay(text) {
+			const b64 = text.replace(/-/g, "+").replace(/_/g, "/");
+			const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+			return JSON.parse(new TextDecoder().decode(bytes));
+		}
+
+		const share = withBusy(async () => {
+			if (!session) return;
+			const url = `${location.origin}${location.pathname}#replay=${encodeReplay(await replayOf())}`;
 			try {
-				await api("POST", `/sessions/${session.id}/rewind`, { toTurn: expectedTurn - 1 }, session.token);
-				await resume();
-				showMessage("Undid the last turn.");
-			} catch (error) {
-				showMessage(`Could not undo: ${error.message}`);
+				await navigator.clipboard.writeText(url);
+				showMessage("Share link copied. Anyone who opens it gets this game, replayed to this point.");
+			} catch {
+				showMessage(url);
 			}
-		}
+		});
 
-		// A seed plus the input list is a complete, portable replay.
-		async function exportReplay() {
+		const exportReplay = withBusy(async () => {
+			if (!session) return;
+			const replay = await replayOf();
+			const blob = new Blob([JSON.stringify(replay, null, 2)], { type: "application/json" });
+			const link = document.createElement("a");
+			link.href = URL.createObjectURL(blob);
+			link.download = `${replay.gameId}-${replay.seed}.json`;
+			link.click();
+			URL.revokeObjectURL(link.href);
+		});
+
+		// Opening a share link: start a session with that seed and replay the inputs.
+		async function importFromHash() {
+			const match = /[#&]replay=([^&]+)/.exec(location.hash);
+			if (!match) return false;
+			history.replaceState(null, "", location.pathname);
+			let replay;
 			try {
-				const summary = await api("GET", `/sessions/${session.id}`, undefined, session.token);
-				const { turns } = await api("GET", `/sessions/${session.id}/transcript`, undefined, session.token);
-				const replay = {
-					gameId: summary.gameId,
-					seed: summary.seed,
-					inputs: turns.filter((t) => t.input !== null).map((t) => t.input),
-				};
-				const out = el("export-output");
-				out.textContent = JSON.stringify(replay, null, 2);
-				out.hidden = false;
-			} catch (error) {
-				showMessage(`Could not export: ${error.message}`);
+				replay = decodeReplay(match[1]);
+			} catch {
+				showMessage("That share link is not valid.", true);
+				return false;
 			}
+			if (!games.some((g) => g.id === replay.gameId)) {
+				showMessage(`This server does not have "${replay.gameId}".`, true);
+				return false;
+			}
+			selectGame(replay.gameId);
+			await newGame(replay.seed);
+			for (const input of replay.inputs) {
+				if (el("input").disabled) break;
+				await playTurn(input);
+			}
+			showMessage(`Replayed ${replay.inputs.length} turns from the share link.`);
+			return true;
 		}
 
-		function forget() {
-			session = null;
-			try {
-				localStorage.removeItem(STORAGE_KEY);
-			} catch {}
-			el("session-info").hidden = true;
-			el("status").hidden = true;
-			el("turn").hidden = true;
-			el("transcript").innerHTML = "";
-			el("export-output").hidden = true;
-		}
-
-		el("new-game").addEventListener("submit", newGame);
-		el("turn").addEventListener("submit", playTurn);
+		el("turn").addEventListener("submit", (event) => {
+			event.preventDefault();
+			const input = el("input").value;
+			el("input").value = "";
+			if (input.trim()) { history.push(input); }
+			historyIndex = history.length;
+			if (!session) { newGame().then((created) => created && input.trim() && playTurn(input)); return; }
+			playTurn(input);
+		});
+		el("input").addEventListener("keydown", (event) => {
+			if (event.key === "ArrowUp" && historyIndex > 0) {
+				historyIndex--;
+				el("input").value = history[historyIndex];
+				event.preventDefault();
+			} else if (event.key === "ArrowDown") {
+				historyIndex = Math.min(historyIndex + 1, history.length);
+				el("input").value = history[historyIndex] ?? "";
+				event.preventDefault();
+			}
+		});
+		el("new").addEventListener("click", () => newGame());
 		el("undo").addEventListener("click", undo);
+		el("share").addEventListener("click", share);
 		el("export").addEventListener("click", exportReplay);
-		el("forget").addEventListener("click", forget);
+		el("terminal").addEventListener("click", (event) => {
+			if (!window.getSelection().toString()) el("input").focus();
+		});
 
-		loadGames().catch((error) => showMessage(`Could not load games: ${error.message}`));
-		session = loadSession();
-		if (session) resume();
+		(async () => {
+			try {
+				await loadGames();
+			} catch (error) {
+				showMessage(`Could not load games: ${error.message}`, true);
+			}
+			if (await importFromHash()) return;
+			session = loadSession();
+			if (session) {
+				try {
+					await resume();
+				} catch (error) {
+					showMessage(`Could not resume the saved session (${error.message}). Start a new game.`);
+					forgetSession();
+					clearScreen();
+				}
+			} else {
+				print("Choose a game above and type a command to begin.", "note");
+			}
+		})();
 	</script>
 </body>
 </html>
