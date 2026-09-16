@@ -1,0 +1,47 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug Server",
+			"preLaunchTask": "Build TypeScript",
+			"program": "${workspaceFolder}/out/index.js",
+			"env": {
+				"ENV": "development",
+				"PORT": "41733",
+				"LOG_LEVEL": "debug",
+				"STORY_DIR": "${workspaceFolder}/stories",
+				"DATABASE_PATH": "${workspaceFolder}/data/zturn.sqlite"
+			},
+			"outputCapture": "std",
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/out/**/*.js"],
+			"skipFiles": ["<node_internals>/**"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug All Tests",
+			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/mocha",
+			"runtimeArgs": ["src/**/*.test.ts"],
+			"env": {
+				"ENV": "test"
+			},
+			"console": "integratedTerminal",
+			"skipFiles": ["<node_internals>/**"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug Current Test File",
+			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/mocha",
+			"runtimeArgs": ["${relativeFile}"],
+			"env": {
+				"ENV": "test"
+			},
+			"console": "integratedTerminal",
+			"skipFiles": ["<node_internals>/**"]
+		}
+	]
+}

@@ -2,7 +2,7 @@ import { App, type AppConfig } from "./app.js";
 import { Logger } from "./logger.js";
 
 const DEFAULT_ENV = "development";
-const DEFAULT_PORT = 3000;
+const DEFAULT_PORT = 41732;
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_STORY_DIR = "./stories";
 const DEFAULT_DATABASE_PATH = "./data/zturn.sqlite";

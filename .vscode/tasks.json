@@ -1,0 +1,55 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build TypeScript",
+			"type": "shell",
+			"command": "./node_modules/.bin/tsc -p tsconfig.json",
+			"problemMatcher": ["$tsc"],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Watch TypeScript",
+			"type": "shell",
+			"command": "./node_modules/.bin/tsc -p tsconfig.json --watch",
+			"isBackground": true,
+			"problemMatcher": ["$tsc-watch"],
+			"group": "build"
+		},
+		{
+			"label": "Lint",
+			"type": "shell",
+			"command": "npm run lint",
+			"presentation": {
+				"reveal": "always"
+			},
+			"problemMatcher": ["$eslint-stylish"]
+		},
+		{
+			"label": "Test",
+			"type": "shell",
+			"command": "npm test",
+			"presentation": {
+				"reveal": "always"
+			},
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Dev Server",
+			"type": "shell",
+			"command": "npm run dev",
+			"isBackground": true,
+			"presentation": {
+				"reveal": "always"
+			},
+			"problemMatcher": []
+		}
+	]
+}
