@@ -22,6 +22,7 @@
 	"license": "UNLICENSED",
 	"dependencies": {
 		"@koa/router": "^15.7.0",
+		"ifvms": "^1.1.6",
 		"koa": "^3.2.1",
 		"koa-body": "^8.0.1",
 		"swagger-jsdoc": "^6.3.0",
