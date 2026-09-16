@@ -9,6 +9,7 @@ import {
 	type TurnResult,
 } from "./types.js";
 import { ZvmEngine } from "./src/index.js";
+import { FakeEngine } from "./src/fake.js";
 import { SNAPSHOT_FORMAT } from "./src/snapshot.js";
 
 export type {
@@ -20,4 +21,4 @@ export type {
 	TurnOutput,
 	TurnResult,
 };
-export { ERRORS, ZvmEngine, SNAPSHOT_FORMAT };
+export { ERRORS, ZvmEngine, FakeEngine, SNAPSHOT_FORMAT };
