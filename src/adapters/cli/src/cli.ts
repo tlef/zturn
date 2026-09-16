@@ -145,6 +145,9 @@ export class Cli {
 			return 2;
 		}
 		const session = await this.client.getSession(creds);
+		if (typeof session.seed !== "number") {
+			throw new Error("the server did not report a seed; it may need updating");
+		}
 		const transcript = await this.client.getTranscript(creds);
 		const replay: IReplayFile = {
 			gameId: session.gameId,
