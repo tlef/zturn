@@ -1,7 +1,7 @@
 import { Cli, parseArgs } from "./src/cli.js";
 import { ZturnClient } from "./src/client.js";
 
-const DEFAULT_URL = "http://127.0.0.1:41732";
+const DEFAULT_URL = "http://127.0.0.1:3000";
 
 // A closed pipe (e.g. `zturn play | head`) is a normal way to stop, not a crash.
 process.stdout.on("error", (error: NodeJS.ErrnoException) => {

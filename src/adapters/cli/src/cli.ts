@@ -21,7 +21,7 @@ Usage:
   zturn import <file> [--play]         create a session from a replay file
 
 Options:
-  --url URL   API base URL (default: $ZTURN_URL or http://127.0.0.1:41732)
+  --url URL   API base URL (default: $ZTURN_URL or http://127.0.0.1:3000)
 `;
 
 export interface ICliIo {

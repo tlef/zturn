@@ -2,7 +2,7 @@ services:
   zturn:
     build: .
     ports:
-      - "41732:41732"
+      - "3000:3000"
     volumes:
       # Story files are not in the image. Put zork1.z3 etc. in ./stories.
       - ./stories:/app/stories:ro
