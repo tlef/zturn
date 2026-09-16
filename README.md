@@ -28,7 +28,7 @@ npm run build
 npm start
 ```
 
-Open http://127.0.0.1:41732. For development, `npm run dev` watches and restarts, and `/docs` serves Swagger UI.
+Open the server in a browser. For development, `npm run dev` watches and restarts, and `/docs` serves Swagger UI.
 
 ## Story files
 
@@ -45,7 +45,7 @@ A freely redistributable v3 game for trying things out is `advent.z3`, the Adven
 
 **Browser.** The home page is a terminal. Pick a game, type. The session id and token stay in the browser's local storage so a reload resumes. Undo rewinds a turn. Share link puts the seed and commands in the URL so someone else gets the same game replayed to the same point. Export saves that as a file.
 
-**CLI.** A readline loop over the API. It talks to `http://127.0.0.1:41732` unless `ZTURN_URL` or `--url` says otherwise.
+**CLI.** A readline loop over the API. `ZTURN_URL` or `--url` names the server; the default is the local one.
 
 ```bash
 npm run cli -- games
@@ -76,7 +76,7 @@ Everything under `/sessions/:id` needs the session's token as a bearer token. Th
 A turn:
 
 ```bash
-curl -s http://127.0.0.1:41732/sessions/SESSION_ID/turns \
+curl -s $ZTURN_URL/sessions/SESSION_ID/turns \
   -H 'authorization: Bearer TOKEN' \
   -H 'content-type: application/json' \
   -d '{"input":"open mailbox","expectedTurn":0,"idempotencyKey":"any-unique-string"}'
@@ -173,13 +173,13 @@ ZTURN_TEST_STORY=stories/advent.z3 npm test
 
 ## Configuration
 
-Environment variables, read once in `index.ts`. Copy `.env.sample` to `.env` for development.
+Environment variables, read once in `index.ts`. Defaults are in `.env.sample`; copy it to `.env` for development.
 
 | Variable | Default | |
 |---|---|---|
 | `ENV` | `development` | `development` and `local` serve `/docs`; anything else does not. |
-| `HOST` | `127.0.0.1` | Bind address. `0.0.0.0` behind a proxy. |
-| `PORT` | `41732` | |
+| `HOST` | loopback | Bind address. `0.0.0.0` behind a proxy. |
+| `PORT` | | Listening port. |
 | `STORY_DIR` | `./stories` | Where the `.z3` files are. |
 | `DATABASE_PATH` | `./data/zturn.sqlite` | Created if missing. `:memory:` for tests. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. Logs are JSON lines. |
@@ -194,7 +194,7 @@ mkdir -p stories                      # add zork1.z3 etc.
 SLACK_SECRET_KEY=$(openssl rand -hex 32) docker compose up -d
 ```
 
-That listens on 41732. Put a reverse proxy with HTTPS in front of it. Session tokens travel in request headers, and the Slack bridge is only useful on a public HTTPS URL because Slack has to call it.
+Compose publishes the port named in `docker-compose.yml`. Put a reverse proxy with HTTPS in front of it. Session tokens travel in request headers, and the Slack bridge is only useful on a public HTTPS URL because Slack has to call it.
 
 Keep `SLACK_SECRET_KEY` stable across deploys. Changing it makes every registered Slack bridge unable to verify its app's signatures; visitors would have to activate again.
 
