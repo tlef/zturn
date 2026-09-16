@@ -8,8 +8,8 @@
 		"node": ">=22.12"
 	},
 	"scripts": {
-		"start": "node out/index.js",
-		"dev": "tsx watch src/index.ts",
+		"start": "node --disable-warning=ExperimentalWarning out/index.js",
+		"dev": "NODE_OPTIONS=--disable-warning=ExperimentalWarning tsx watch src/index.ts",
 		"build": "tsc && node scripts/generate-api-docs.mjs",
 		"docs:generate": "node scripts/generate-api-docs.mjs",
 		"type-check": "tsc --noEmit",

@@ -16,32 +16,47 @@
 			},
 			"outputCapture": "std",
 			"sourceMaps": true,
-			"outFiles": ["${workspaceFolder}/out/**/*.js"],
-			"skipFiles": ["<node_internals>/**"]
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			],
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"runtimeArgs": [
+				"--disable-warning=ExperimentalWarning"
+			]
 		},
 		{
 			"type": "node",
 			"request": "launch",
 			"name": "Debug All Tests",
 			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/mocha",
-			"runtimeArgs": ["src/**/*.test.ts"],
+			"runtimeArgs": [
+				"src/**/*.test.ts"
+			],
 			"env": {
 				"ENV": "test"
 			},
 			"console": "integratedTerminal",
-			"skipFiles": ["<node_internals>/**"]
+			"skipFiles": [
+				"<node_internals>/**"
+			]
 		},
 		{
 			"type": "node",
 			"request": "launch",
 			"name": "Debug Current Test File",
 			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/mocha",
-			"runtimeArgs": ["${relativeFile}"],
+			"runtimeArgs": [
+				"${relativeFile}"
+			],
 			"env": {
 				"ENV": "test"
 			},
 			"console": "integratedTerminal",
-			"skipFiles": ["<node_internals>/**"]
+			"skipFiles": [
+				"<node_internals>/**"
+			]
 		}
 	]
 }
