@@ -10,7 +10,8 @@
 	"scripts": {
 		"start": "node out/index.js",
 		"dev": "tsx watch src/index.ts",
-		"build": "tsc",
+		"build": "tsc && node scripts/generate-api-docs.mjs",
+		"docs:generate": "node scripts/generate-api-docs.mjs",
 		"type-check": "tsc --noEmit",
 		"lint": "eslint 'src/**/*.ts' && prettier --check 'src/**/*.ts'",
 		"lint:fix": "eslint 'src/**/*.ts' --fix && prettier --write 'src/**/*.ts'",
@@ -22,7 +23,9 @@
 	"dependencies": {
 		"@koa/router": "^15.7.0",
 		"koa": "^3.2.1",
-		"koa-body": "^8.0.1"
+		"koa-body": "^8.0.1",
+		"swagger-jsdoc": "^6.3.0",
+		"swagger-ui-dist": "^5.33.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -32,6 +35,7 @@
 		"@types/mocha": "^10.0.10",
 		"@types/node": "^22.20.3",
 		"@types/supertest": "^7.2.1",
+		"@types/swagger-jsdoc": "^6.0.4",
 		"c8": "^12.0.0",
 		"chai": "^6.2.2",
 		"eslint": "^10.10.0",

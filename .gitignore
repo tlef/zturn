@@ -12,5 +12,8 @@ DESIGN.md
 # Story files are not shipped
 stories/
 
+# Generated API docs
+api-docs/
+
 # SQLite databases
 data/

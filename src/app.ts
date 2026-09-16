@@ -8,6 +8,8 @@ import {
 	type IHealthController,
 } from "./controllers/health-controller/index.js";
 import { ApiHealth } from "./api/health.js";
+import { ApiDocsController } from "./controllers/api-docs-controller/index.js";
+import { ApiDocs } from "./api/api-docs.js";
 
 export interface AppConfig {
 	env: string;
@@ -44,6 +46,12 @@ export class App {
 		this.apiHealth = new ApiHealth(this.healthController);
 		this.apiHealth.registerRoutes(this.router);
 
+		// Swagger UI, development only. Registered before auth so /docs is public.
+		if (isDevelopment(config.env)) {
+			const apiDocs = new ApiDocs(new ApiDocsController());
+			apiDocs.registerRoutes(this.router);
+		}
+
 		this.app.use(this.router.routes());
 		this.app.use(this.router.allowedMethods());
 	}
@@ -67,6 +75,10 @@ export class App {
 	public getCallback(): ReturnType<Koa["callback"]> {
 		return this.app.callback();
 	}
+}
+
+function isDevelopment(env: string): boolean {
+	return env === "development" || env === "local";
 }
 
 // Logs 5xx errors and returns a clean body. 4xx errors from ctx.throw are

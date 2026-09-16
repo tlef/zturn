@@ -77,7 +77,7 @@ function logError(error: unknown, data?: object): void {
 }
 
 function getLoggerMiddleware(env: string): Middleware {
-	if (env === "test") {
+	if (env === "test" || env === "local") {
 		return async (_ctx, next) => {
 			await next();
 		};

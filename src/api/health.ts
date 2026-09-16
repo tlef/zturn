@@ -10,6 +10,29 @@ export class ApiHealth {
 	}
 
 	public registerRoutes(router: Router): void {
+		/**
+		 * @openapi
+		 * /health:
+		 *   get:
+		 *     tags:
+		 *       - Health
+		 *     summary: Liveness check
+		 *     description: Returns ok while the process is up. No authentication.
+		 *     responses:
+		 *       200:
+		 *         description: The service is running
+		 *         content:
+		 *           application/json:
+		 *             schema:
+		 *               type: object
+		 *               properties:
+		 *                 status:
+		 *                   type: string
+		 *                   example: ok
+		 *                 uptimeSeconds:
+		 *                   type: integer
+		 *                   example: 42
+		 */
 		router.get("/health", this.getHealth.bind(this));
 	}
 
