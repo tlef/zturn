@@ -31,6 +31,7 @@ import { ApiHealth } from "./api/health.js";
 import { ApiGame } from "./api/game.js";
 import { ApiSession } from "./api/session.js";
 import { ApiDocs } from "./api/api-docs.js";
+import { ApiWeb } from "./api/web.js";
 import { controllerErrorMiddleware } from "./api/api-errors.js";
 
 export interface AppConfig {
@@ -55,6 +56,7 @@ export class App {
 	protected apiHealth: ApiHealth;
 	protected apiGame: ApiGame;
 	protected apiSession: ApiSession;
+	protected apiWeb: ApiWeb;
 
 	private server: ReturnType<Koa["listen"]> | null = null;
 
@@ -101,6 +103,9 @@ export class App {
 
 		this.apiSession = new ApiSession(this.sessionController);
 		this.apiSession.registerRoutes(this.router);
+
+		this.apiWeb = new ApiWeb();
+		this.apiWeb.registerRoutes(this.router);
 
 		this.app.use(this.router.routes());
 		this.app.use(this.router.allowedMethods());

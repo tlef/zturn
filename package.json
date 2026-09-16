@@ -10,7 +10,7 @@
 	"scripts": {
 		"start": "node --disable-warning=ExperimentalWarning out/index.js",
 		"dev": "NODE_OPTIONS=--disable-warning=ExperimentalWarning tsx watch src/index.ts",
-		"build": "tsc && node scripts/generate-api-docs.mjs",
+		"build": "tsc && node scripts/copy-static.mjs && node scripts/generate-api-docs.mjs",
 		"docs:generate": "node scripts/generate-api-docs.mjs",
 		"type-check": "tsc --noEmit",
 		"lint": "eslint 'src/**/*.ts' && prettier --check 'src/**/*.ts'",

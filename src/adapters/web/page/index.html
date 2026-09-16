@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>zturn</title>
+</head>
+<body>
+	<h1>zturn</h1>
+
+	<form id="new-game">
+		<label>Game <select id="game"></select></label>
+		<label>Seed <input id="seed" type="number" min="1" placeholder="random"></label>
+		<button type="submit">New game</button>
+	</form>
+
+	<p id="session-info" hidden>
+		Session <code id="session-id"></code>, seed <code id="session-seed"></code>, turn <span id="session-turn"></span>.
+		<button type="button" id="undo">Undo</button>
+		<button type="button" id="export">Export</button>
+		<button type="button" id="forget">Forget session</button>
+	</p>
+
+	<p id="status" hidden>
+		<strong id="location"></strong> &middot; Score: <span id="score"></span> &middot; Moves: <span id="moves"></span>
+	</p>
+
+	<div id="transcript"></div>
+
+	<form id="turn" hidden>
+		<label>&gt; <input id="input" autocomplete="off" autofocus></label>
+		<button type="submit">Send</button>
+	</form>
+
+	<p id="message"></p>
+	<pre id="export-output" hidden></pre>
+
+	<script>
+		// A thin client over the zturn HTTP API. The page keeps the session id and
+		// token in localStorage so a reload resumes the game.
+		const STORAGE_KEY = "zturn.session";
+		const el = (id) => document.getElementById(id);
+
+		let session = null; // { id, token, gameId }
+		let expectedTurn = 0;
+
+		async function api(method, path, body, token) {
+			const headers = { accept: "application/json" };
+			if (token) headers.authorization = `Bearer ${token}`;
+			if (body !== undefined) headers["content-type"] = "application/json";
+			const res = await fetch(path, {
+				method,
+				headers,
+				body: body === undefined ? undefined : JSON.stringify(body),
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok) throw Object.assign(new Error(data.error || res.status), { status: res.status, data });
+			return data;
+		}
+
+		function showMessage(text) {
+			el("message").textContent = text || "";
+		}
+
+		function appendTurn(input, out) {
+			const block = document.createElement("div");
+			if (input !== null) {
+				const cmd = document.createElement("p");
+				cmd.textContent = `> ${input}`;
+				block.appendChild(cmd);
+			}
+			const text = document.createElement("p");
+			text.innerHTML = out.text
+				.split("\n")
+				.map((line) => line.replace(/&/g, "&amp;").replace(/</g, "&lt;"))
+				.join("<br>");
+			block.appendChild(text);
+			el("transcript").appendChild(block);
+			block.scrollIntoView({ block: "end" });
+		}
+
+		function renderStatus(out) {
+			const status = el("status");
+			if (out.status) {
+				el("location").textContent = out.status.location;
+				el("score").textContent = out.status.score;
+				el("moves").textContent = out.status.moves;
+				status.hidden = false;
+			} else {
+				status.hidden = true;
+			}
+			const over = out.awaiting === "none";
+			el("turn").hidden = over;
+			el("input").disabled = over;
+			if (over) showMessage("The game has ended.");
+		}
+
+		function renderSession(summary) {
+			el("session-id").textContent = summary.id;
+			el("session-seed").textContent = summary.seed;
+			el("session-turn").textContent = summary.turn;
+			el("session-info").hidden = false;
+			el("undo").disabled = summary.turn === 0;
+			expectedTurn = summary.turn;
+		}
+
+		function saveSession() {
+			try {
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+			} catch {}
+		}
+
+		function loadSession() {
+			try {
+				return JSON.parse(localStorage.getItem(STORAGE_KEY));
+			} catch {
+				return null;
+			}
+		}
+
+		async function loadGames() {
+			const { games } = await api("GET", "/games");
+			const select = el("game");
+			select.innerHTML = "";
+			for (const game of games) {
+				const option = document.createElement("option");
+				option.value = game.id;
+				option.textContent = game.title;
+				select.appendChild(option);
+			}
+			if (games.length === 0) showMessage("The server has no games loaded.");
+		}
+
+		async function newGame(event) {
+			event.preventDefault();
+			showMessage("");
+			const body = { gameId: el("game").value };
+			const seed = Number(el("seed").value);
+			if (seed > 0) body.seed = seed;
+			try {
+				const created = await api("POST", "/sessions", body);
+				session = { id: created.session.id, token: created.token, gameId: created.session.gameId };
+				saveSession();
+				el("transcript").innerHTML = "";
+				renderSession(created.session);
+				appendTurn(null, created.out);
+				renderStatus(created.out);
+				el("input").focus();
+			} catch (error) {
+				showMessage(`Could not start: ${error.message}`);
+			}
+		}
+
+		// Rebuilds the page from the server after a reload or an undo.
+		async function resume() {
+			try {
+				const summary = await api("GET", `/sessions/${session.id}`, undefined, session.token);
+				const { turns } = await api("GET", `/sessions/${session.id}/transcript`, undefined, session.token);
+				el("transcript").innerHTML = "";
+				renderSession(summary);
+				for (const turn of turns) appendTurn(turn.input, turn.out);
+				renderStatus(turns[turns.length - 1].out);
+			} catch (error) {
+				showMessage(`Could not resume the saved session (${error.message}). Start a new game.`);
+				forget();
+			}
+		}
+
+		async function playTurn(event) {
+			event.preventDefault();
+			const input = el("input").value;
+			el("input").value = "";
+			showMessage("");
+			try {
+				const reply = await api(
+					"POST",
+					`/sessions/${session.id}/turns`,
+					{ input, expectedTurn, idempotencyKey: crypto.randomUUID() },
+					session.token,
+				);
+				expectedTurn = reply.turn;
+				el("session-turn").textContent = reply.turn;
+				el("undo").disabled = false;
+				appendTurn(input, reply.out);
+				renderStatus(reply.out);
+			} catch (error) {
+				if (error.status === 409 && error.data.error === "turn_conflict") {
+					showMessage(`Someone else played; the session is now at turn ${error.data.turn}. Your input was not sent.`);
+					await resume();
+				} else {
+					showMessage(`Error: ${error.message}`);
+				}
+			}
+			el("input").focus();
+		}
+
+		async function undo() {
+			if (expectedTurn === 0) return;
+			try {
+				await api("POST", `/sessions/${session.id}/rewind`, { toTurn: expectedTurn - 1 }, session.token);
+				await resume();
+				showMessage("Undid the last turn.");
+			} catch (error) {
+				showMessage(`Could not undo: ${error.message}`);
+			}
+		}
+
+		// A seed plus the input list is a complete, portable replay.
+		async function exportReplay() {
+			try {
+				const summary = await api("GET", `/sessions/${session.id}`, undefined, session.token);
+				const { turns } = await api("GET", `/sessions/${session.id}/transcript`, undefined, session.token);
+				const replay = {
+					gameId: summary.gameId,
+					seed: summary.seed,
+					inputs: turns.filter((t) => t.input !== null).map((t) => t.input),
+				};
+				const out = el("export-output");
+				out.textContent = JSON.stringify(replay, null, 2);
+				out.hidden = false;
+			} catch (error) {
+				showMessage(`Could not export: ${error.message}`);
+			}
+		}
+
+		function forget() {
+			session = null;
+			try {
+				localStorage.removeItem(STORAGE_KEY);
+			} catch {}
+			el("session-info").hidden = true;
+			el("status").hidden = true;
+			el("turn").hidden = true;
+			el("transcript").innerHTML = "";
+			el("export-output").hidden = true;
+		}
+
+		el("new-game").addEventListener("submit", newGame);
+		el("turn").addEventListener("submit", playTurn);
+		el("undo").addEventListener("click", undo);
+		el("export").addEventListener("click", exportReplay);
+		el("forget").addEventListener("click", forget);
+
+		loadGames().catch((error) => showMessage(`Could not load games: ${error.message}`));
+		session = loadSession();
+		if (session) resume();
+	</script>
+</body>
+</html>
