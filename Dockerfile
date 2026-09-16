@@ -24,7 +24,6 @@ COPY package.json ./
 RUN mkdir -p /app/stories /app/data && chown -R node:node /app
 USER node
 EXPOSE 3000
-VOLUME ["/app/stories", "/app/data"]
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-    CMD wget -qO- http://127.0.0.1:3000/health || exit 1
+# No VOLUME or HEALTHCHECK instructions: Railway's builder rejects them, and
+# both are declared where they are used instead (docker-compose.yml, railway.json).
 CMD ["node", "--disable-warning=ExperimentalWarning", "out/index.js"]
