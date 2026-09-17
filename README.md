@@ -196,6 +196,8 @@ SLACK_SECRET_KEY=$(openssl rand -hex 32) docker compose up -d
 
 Compose publishes the port named in `docker-compose.yml`. Put a reverse proxy with HTTPS in front of it. Session tokens travel in request headers, and the Slack bridge is only useful on a public HTTPS URL because Slack has to call it.
 
+On Railway, `.railway/railway.ts` holds the service's deploy settings. `railway config plan` shows drift and `railway config apply` fixes it. Variables are never in that file.
+
 Keep `SLACK_SECRET_KEY` stable across deploys. Changing it makes every registered Slack bridge unable to verify its app's signatures; visitors would have to activate again.
 
 Sessions are small, a few kilobytes each, and are never deleted.
