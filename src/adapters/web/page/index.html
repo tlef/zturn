@@ -67,14 +67,15 @@
 
 		/* Terminal */
 		.picker { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0 0 0.75rem; }
-		.picker .games { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
-		.picker .games button {
-			background: var(--card); color: var(--fg); border: 0; border-right: 1px solid var(--rule);
-			padding: 0.45rem 0.85rem; font: inherit; font-size: 0.95rem; cursor: pointer;
+		.picker .games {
+			background: var(--card); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px;
+			padding: 0.45rem 2rem 0.45rem 0.85rem; font: inherit; font-size: 0.95rem; cursor: pointer;
+			max-width: 100%; appearance: none; -webkit-appearance: none;
+			background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+			background-position: calc(100% - 1rem) 55%, calc(100% - 0.7rem) 55%;
+			background-size: 0.3rem 0.3rem; background-repeat: no-repeat;
 		}
-		.picker .games button:last-child { border-right: 0; }
-		.picker .games button[aria-checked="true"] { background: var(--accent); color: #fff; }
-		.picker .games:empty::after { content: "No games loaded on the server."; padding: 0.45rem 0.85rem; color: var(--muted); display: inline-block; }
+		.picker .games:disabled { color: var(--muted); cursor: default; }
 		.picker .spacer { flex: 1; }
 		.picker .tools { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 		.picker .tools button, .picker .seed {
@@ -171,7 +172,7 @@
 
 		<section id="play">
 			<div class="picker">
-				<div class="games" id="games" role="radiogroup" aria-label="Game"></div>
+				<select class="games" id="games" aria-label="Game"></select>
 				<input class="seed" id="seed" type="number" min="1" placeholder="seed (optional)" title="Games with the same seed and the same commands play out identically.">
 				<span class="spacer"></span>
 				<div class="tools">
@@ -344,25 +345,27 @@ curl -s ORIGIN/sessions/SESSION_ID/turns \
 
 		function selectGame(id) {
 			selectedGame = id;
-			for (const button of el("games").children) {
-				button.setAttribute("aria-checked", String(button.dataset.id === id));
-			}
+			el("games").value = id;
 		}
 
 		async function loadGames() {
 			({ games } = await api("GET", "/games"));
-			const box = el("games");
-			box.textContent = "";
+			const select = el("games");
+			select.textContent = "";
 			for (const game of games) {
-				const button = document.createElement("button");
-				button.type = "button";
-				button.role = "radio";
-				button.dataset.id = game.id;
-				button.textContent = game.title;
-				button.addEventListener("click", () => selectGame(game.id));
-				box.appendChild(button);
+				const option = document.createElement("option");
+				option.value = game.id;
+				option.textContent = game.title;
+				select.appendChild(option);
 			}
-			if (games.length) selectGame(games[0].id);
+			if (games.length) {
+				selectGame(games[0].id);
+			} else {
+				const option = document.createElement("option");
+				option.textContent = "No games loaded on the server";
+				select.appendChild(option);
+				select.disabled = true;
+			}
 			const example = el("curl-example");
 			example.innerHTML = example.innerHTML
 				.replaceAll("ORIGIN", location.origin)
@@ -525,6 +528,7 @@ curl -s ORIGIN/sessions/SESSION_ID/turns \
 				event.preventDefault();
 			}
 		});
+		el("games").addEventListener("change", () => (selectedGame = el("games").value));
 		el("new").addEventListener("click", () => newGame());
 		el("undo").addEventListener("click", undo);
 		el("share").addEventListener("click", share);
