@@ -67,6 +67,7 @@
 
 		/* Terminal */
 		.picker { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0 0 0.75rem; }
+		.picker .games-label { color: var(--muted); font-size: 0.95rem; }
 		.picker .games {
 			background: var(--card); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px;
 			padding: 0.45rem 2rem 0.45rem 0.85rem; font: inherit; font-size: 0.95rem; cursor: pointer;
@@ -172,7 +173,8 @@
 
 		<section id="play">
 			<div class="picker">
-				<select class="games" id="games" aria-label="Game"></select>
+				<label class="games-label" for="games">Game:</label>
+				<select class="games" id="games"></select>
 				<input class="seed" id="seed" type="number" min="1" placeholder="seed (optional)" title="Games with the same seed and the same commands play out identically.">
 				<span class="spacer"></span>
 				<div class="tools">
